@@ -2,54 +2,67 @@
 
 namespace App\Http\Controllers;
 
-class Day2Controller extends Controller
-{
-    public $outcomeMultiplier = [
-        'X' => 0,
-        'Y' => 1,
-        'Z' => 2,
-    ];
+use Illuminate\Support\Facades\File;
 
-    public $combinations = [
-        'A' => [ // Rock
-            'X' => 3, // Rock
-            'Y' => 6, // Paper
-            'Z' => 0, // Scissors
-        ],
-        'B' => [ // Paper
-            'X' => 0, // Rock
-            'Y' => 3, // Paper
-            'Z' => 6, // Scissors
-        ],
-        'C' => [ // Scissors
-            'X' => 6, // Rock
-            'Y' => 0, // Paper
-            'Z' => 3, // Scissors
-        ],
+class Day1Controller extends Controller
+{
+    public array $wordMap = [
+        'zero' => 0,
+        'one' => 1,
+        'two' => 2,
+        'three' => 3,
+        'four' => 4,
+        'five' => 5,
+        'six' => 6,
+        'seven' => 7,
+        'eight' => 8,
+        'nine' => 9,
     ];
 
     public function one()
     {
-        return $this->data()->map (function ($round) {
-            return ($this->outcomeMultiplier[$round[1]] + 1)
-                + $this->combinations[$round[0]][$round[1]];
-        })->sum();
+        return $this->data()
+            ->map(fn (string $line) => preg_replace('/[^0-9]/', '', $line))
+            ->map(fn (string $line) => $line[0] . ($line[strlen($line) - 1] ?? $line[0]))
+            ->sum();
     }
 
     public function two()
     {
-        return $this->data()->map (function ($round) {
-            $roundScore = ($this->outcomeMultiplier[$round[1]] * 3);
-            $chosen = array_flip($this->combinations[$round[0]]);
+        return $this->data()
+            ->map(function (string $line) {
+                $results = collect();
+                $toCheck = collect();
 
-            return $roundScore + ($this->outcomeMultiplier[$chosen[$roundScore]] + 1);
-        })->sum();
+                for ($i = 0; $i < strlen($line); $i++) {
+                    $toCheck = $toCheck
+                        ->map(fn (string $word) => $word . $line[$i])
+                        ->prepend($line[$i])
+                        ->reject(function (string $word) use ($results) {
+                            if (isset($this->wordMap[$word])) {
+                                $results->push($this->wordMap[$word]);
+
+                                return true;
+                            }
+
+                            return false;
+                        });
+
+                    if (is_numeric($line[$i])) {
+                        $results->push($line[$i]);
+                    }
+                }
+
+                return $results->join('');
+            })
+            ->map(fn (string $line) => $line[0] . ($line[strlen($line) - 1] ?? $line[0]))
+            ->sum();
     }
 
     private function data()
     {
-        $file = file(public_path('inputs/2-1.txt'), FILE_IGNORE_NEW_LINES);
+        $file = File::get(public_path('inputs/1-1.txt'), 'r');
 
-        return collect($file)->map(fn ($line) => explode(' ', $line));
+        return collect(explode(PHP_EOL, $file))->filter();
     }
 }
